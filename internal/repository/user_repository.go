@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// IUserRepository defines the interface for user repository operations.
 type IUserRepository interface {
 	FindById(ctx context.Context, id string) (*model.PrivateUserModel, error)
 	FindByEmail(ctx context.Context, email string) (*model.PrivateUserModel, error)
@@ -21,8 +22,16 @@ type IUserRepository interface {
 	Delete(ctx context.Context, user *model.PrivateUserModel) error
 }
 
+// MongoUserRepository is an implementation of IUserRepository using MongoDB.
 type MongoUserRepository struct {
 	Collection IUserMongoAdapter
+}
+
+// NewUserRepository creates a new instance of MongoUserRepository.
+func NewUserRepository(collection IUserMongoAdapter) *MongoUserRepository {
+	return &MongoUserRepository{
+		Collection: collection,
+	}
 }
 
 // Create implements IUserRepository.
