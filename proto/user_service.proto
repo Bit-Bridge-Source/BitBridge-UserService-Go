@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option go_package = "user-service/pb";
+
+message UserResponse {
+  // fields for User
+}
+
+message CreateUserRequest {
+  // fields for creating a User
+}
+
+message PublicUserResponse {
+  // fields for public view of a User
+}
+
+message IdentifierRequest {
+  string userIdentifier = 1;
+}
