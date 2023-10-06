@@ -6,50 +6,59 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type MongoSingleResultAlias mongo.SingleResult
-
-func (s *MongoSingleResultAlias) Decode(v interface{}) error {
-	return (*mongo.SingleResult)(s).Decode(v)
-}
-
-type DecodeResult interface {
+// ISingleResult represents the result of a query.
+type ISingleResult interface {
 	Decode(v interface{}) error
 }
 
+// SingleResult wraps mongo.SingleResult
+type SingleResult struct {
+	Result *mongo.SingleResult
+}
+
+// Decode decodes the single result.
+func (r *SingleResult) Decode(v interface{}) error {
+	return r.Result.Decode(v)
+}
+
+// IUserMongoAdapter interface
 type IUserMongoAdapter interface {
 	InsertOne(ctx context.Context, document interface{}) (*mongo.InsertOneResult, error)
 	UpdateOne(ctx context.Context, filter interface{}, update interface{}) (*mongo.UpdateResult, error)
 	DeleteOne(ctx context.Context, filter interface{}) (*mongo.DeleteResult, error)
-	FindOne(ctx context.Context, filter interface{}) DecodeResult
+	FindOne(ctx context.Context, filter interface{}) ISingleResult
+	// Add other methods if needed
 }
 
+// UserMongoAdapter struct
 type UserMongoAdapter struct {
-	Collection *mongo.Collection
+	Adapter IUserMongoAdapter
 }
 
 // DeleteOne implements IUserMongoAdapter.
 func (m *UserMongoAdapter) DeleteOne(ctx context.Context, filter interface{}) (*mongo.DeleteResult, error) {
-	return m.Collection.DeleteOne(ctx, filter)
+	return m.Adapter.DeleteOne(ctx, filter)
 }
 
 // FindOne implements IUserMongoAdapter.
-func (m *UserMongoAdapter) FindOne(ctx context.Context, filter interface{}) DecodeResult {
-	return (*MongoSingleResultAlias)(m.Collection.FindOne(ctx, filter))
+func (m *UserMongoAdapter) FindOne(ctx context.Context, filter interface{}) ISingleResult {
+	return m.Adapter.FindOne(ctx, filter)
 }
 
 // InsertOne implements IUserMongoAdapter.
 func (m *UserMongoAdapter) InsertOne(ctx context.Context, document interface{}) (*mongo.InsertOneResult, error) {
-	return m.Collection.InsertOne(ctx, document)
+	return m.Adapter.InsertOne(ctx, document)
 }
 
 // UpdateOne implements IUserMongoAdapter.
 func (m *UserMongoAdapter) UpdateOne(ctx context.Context, filter interface{}, update interface{}) (*mongo.UpdateResult, error) {
-	return m.Collection.UpdateOne(ctx, filter, update)
+	return m.Adapter.UpdateOne(ctx, filter, update)
 }
 
-func NewMongoAdapter(collection *mongo.Collection) *UserMongoAdapter {
+// NewMongoAdapter creates a new UserMongoAdapter
+func NewMongoAdapter(adapter IUserMongoAdapter) *UserMongoAdapter {
 	return &UserMongoAdapter{
-		Collection: collection,
+		Adapter: adapter,
 	}
 }
 
