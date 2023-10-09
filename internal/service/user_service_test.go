@@ -6,9 +6,11 @@ import (
 	"testing"
 	"time"
 
+	commonService "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/service"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/model"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/repository"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/service"
+	publicModel "github.com/Bit-Bridge-Source/BitBridge-UserService-Go/public/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -90,7 +92,7 @@ type MockCryptoService struct {
 	mock.Mock
 }
 
-func (m *MockCryptoService) HashPassword(password string) (string, error) {
+func (m *MockCryptoService) GenerateFromPassword(password string) (string, error) {
 	args := m.Called(password)
 	return args.String(0), args.Error(1)
 }
@@ -100,10 +102,14 @@ func (m *MockCryptoService) CompareHashAndPassword(hashedPassword, password stri
 	return args.Error(0)
 }
 
+// Ensure that MockCryptoService implements ICryptoService.
+var _ commonService.ICryptoService = &MockCryptoService{}
+
 func TestCreate_Success(t *testing.T) {
 	// Arrange
 	mockRepository := new(MockIUserRepository)
-	service := service.NewUserService(mockRepository)
+	mockCrypto := new(MockCryptoService)
+	service := service.NewUserService(mockRepository, mockCrypto)
 	ctx := context.Background()
 	privateUser := &model.PrivateUserModel{
 		ID:        primitive.NewObjectID(),
@@ -114,12 +120,17 @@ func TestCreate_Success(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	mockRepository.On("Create", ctx, mock.MatchedBy(func(user *model.PrivateUserModel) bool {
-		return user.Email == privateUser.Email && user.Username == privateUser.Username
-	})).Return(nil)
+	userToBeCreated := &publicModel.CreateUserModel{
+		Email:    privateUser.Email,
+		Username: privateUser.Username,
+		Password: "test",
+	}
+
+	mockRepository.On("Create", ctx, mock.Anything).Return(nil)
+	mockCrypto.On("GenerateFromPassword", mock.Anything).Return("hashedPassword", nil)
 
 	// Act
-	result, err := service.Create(ctx, privateUser)
+	result, err := service.Create(ctx, userToBeCreated)
 
 	// Assert
 	assert.NoError(t, err)
@@ -131,7 +142,8 @@ func TestCreate_Success(t *testing.T) {
 func TestCreate_Failure(t *testing.T) {
 	// Arrange
 	mockRepository := new(MockIUserRepository)
-	service := service.NewUserService(mockRepository)
+	mockCrypto := new(MockCryptoService)
+	service := service.NewUserService(mockRepository, mockCrypto)
 	ctx := context.Background()
 	privateUser := &model.PrivateUserModel{
 		ID:        primitive.NewObjectID(),
@@ -142,12 +154,48 @@ func TestCreate_Failure(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	mockRepository.On("Create", ctx, mock.MatchedBy(func(user *model.PrivateUserModel) bool {
-		return user.Email == privateUser.Email && user.Username == privateUser.Username
-	})).Return(assert.AnError)
+	userToBeCreated := &publicModel.CreateUserModel{
+		Email:    privateUser.Email,
+		Username: privateUser.Username,
+		Password: "test",
+	}
+
+	mockRepository.On("Create", ctx, mock.Anything).Return(assert.AnError)
+	mockCrypto.On("GenerateFromPassword", mock.Anything).Return("hashedPassword", nil)
+	// Act
+	result, err := service.Create(ctx, userToBeCreated)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	mockRepository.AssertExpectations(t)
+}
+
+func TestCreate_Failure_InvalidEncryption(t *testing.T) {
+	// Arrange
+	mockRepository := new(MockIUserRepository)
+	mockCrypto := new(MockCryptoService)
+	service := service.NewUserService(mockRepository, mockCrypto)
+	ctx := context.Background()
+	privateUser := &model.PrivateUserModel{
+		ID:        primitive.NewObjectID(),
+		Email:     "test@mail.com",
+		Username:  "test",
+		Hash:      "test",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	userToBeCreated := &publicModel.CreateUserModel{
+		Email:    privateUser.Email,
+		Username: privateUser.Username,
+		Password: "test",
+	}
+
+	mockCrypto.On("GenerateFromPassword", mock.Anything).Return("", assert.AnError)
 
 	// Act
-	result, err := service.Create(ctx, privateUser)
+	result, err := service.Create(ctx, userToBeCreated)
 
 	// Assert
 	assert.Error(t, err)
@@ -158,7 +206,8 @@ func TestCreate_Failure(t *testing.T) {
 func TestFindByEmail_Success(t *testing.T) {
 	// Arrange
 	mockRepository := new(MockIUserRepository)
-	service := service.NewUserService(mockRepository)
+	mockCrypto := new(MockCryptoService)
+	service := service.NewUserService(mockRepository, mockCrypto)
 	ctx := context.Background()
 	privateUser := &model.PrivateUserModel{
 		ID:        primitive.NewObjectID(),
@@ -179,12 +228,14 @@ func TestFindByEmail_Success(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Equal(t, privateUser.Email, result.Email)
 	mockRepository.AssertExpectations(t)
+	mockCrypto.AssertExpectations(t)
 }
 
 func TestFindByEmail_Failure(t *testing.T) {
 	// Arrange
 	mockRepository := new(MockIUserRepository)
-	service := service.NewUserService(mockRepository)
+	mockCrypto := new(MockCryptoService)
+	service := service.NewUserService(mockRepository, mockCrypto)
 	ctx := context.Background()
 	privateUser := &model.PrivateUserModel{
 		ID:        primitive.NewObjectID(),
@@ -209,7 +260,8 @@ func TestFindByEmail_Failure(t *testing.T) {
 func TestFindById_Success(t *testing.T) {
 	// Arrange
 	mockRepository := new(MockIUserRepository)
-	service := service.NewUserService(mockRepository)
+	mockCrypto := new(MockCryptoService)
+	service := service.NewUserService(mockRepository, mockCrypto)
 	ctx := context.Background()
 	privateUser := &model.PrivateUserModel{
 		ID:        primitive.NewObjectID(),
@@ -235,7 +287,8 @@ func TestFindById_Success(t *testing.T) {
 func TestFindById_Failure(t *testing.T) {
 	// Arrange
 	mockRepository := new(MockIUserRepository)
-	service := service.NewUserService(mockRepository)
+	mockCrypto := new(MockCryptoService)
+	service := service.NewUserService(mockRepository, mockCrypto)
 	ctx := context.Background()
 	privateUser := &model.PrivateUserModel{
 		ID:        primitive.NewObjectID(),
@@ -260,7 +313,8 @@ func TestFindById_Failure(t *testing.T) {
 
 func TestFindByUsername_Success(t *testing.T) {
 	mockRepo := new(MockIUserRepository)
-	service := service.NewUserService(mockRepo)
+	mockCrypto := new(MockCryptoService)
+	service := service.NewUserService(mockRepo, mockCrypto)
 
 	ctx := context.Background()
 	testUser := &model.PrivateUserModel{
@@ -284,7 +338,8 @@ func TestFindByUsername_Success(t *testing.T) {
 
 func TestFindByUsername_Failure(t *testing.T) {
 	mockRepo := new(MockIUserRepository)
-	service := service.NewUserService(mockRepo)
+	mockCrypto := new(MockCryptoService)
+	service := service.NewUserService(mockRepo, mockCrypto)
 
 	ctx := context.Background()
 	testUser := &model.PrivateUserModel{
@@ -307,7 +362,8 @@ func TestFindByUsername_Failure(t *testing.T) {
 
 func TestFindByIdentifier(t *testing.T) {
 	mockRepo := new(MockIUserRepository)
-	service := service.NewUserService(mockRepo)
+	mockCrypto := new(MockCryptoService)
+	service := service.NewUserService(mockRepo, mockCrypto)
 
 	ctx := context.Background()
 	testUser := &model.PrivateUserModel{
