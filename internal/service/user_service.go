@@ -3,14 +3,18 @@ package service
 import (
 	"context"
 	"net/mail"
+	"time"
 
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/model"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/repository"
+	publicModel "github.com/Bit-Bridge-Source/BitBridge-UserService-Go/public/model"
+	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type IUserService interface {
-	Create(ctx context.Context, user *model.PrivateUserModel) (*model.PrivateUserModel, error)
+	Create(ctx context.Context, user *publicModel.CreateUserModel) (*model.PrivateUserModel, error)
 	FindById(ctx context.Context, id string) (*model.PrivateUserModel, error)
 	FindByEmail(ctx context.Context, email string) (*model.PrivateUserModel, error)
 	FindByUsername(ctx context.Context, username string) (*model.PrivateUserModel, error)
@@ -29,8 +33,22 @@ func NewUserService(repository repository.IUserRepository) *UserService {
 }
 
 // Create implements IUserService.
-func (s *UserService) Create(ctx context.Context, user *model.PrivateUserModel) (*model.PrivateUserModel, error) {
-	err := s.Repository.Create(ctx, user)
+func (s *UserService) Create(ctx context.Context, createUserModel *publicModel.CreateUserModel) (*model.PrivateUserModel, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(createUserModel.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to hash password")
+	}
+
+	user := &model.PrivateUserModel{
+		ID:        primitive.NewObjectID(),
+		Email:     createUserModel.Email,
+		Username:  createUserModel.Username,
+		Hash:      string(hashedPassword),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	err = s.Repository.Create(ctx, user)
 
 	if err != nil {
 		return nil, err

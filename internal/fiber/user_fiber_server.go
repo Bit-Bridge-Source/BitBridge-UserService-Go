@@ -9,3 +9,7 @@ type UserFiberServer struct {
 func (server *UserFiberServer) Run(port string) error {
 	return server.App.Listen(port)
 }
+
+func (server *UserFiberServer) Stop() error {
+	return server.App.Shutdown()
+}

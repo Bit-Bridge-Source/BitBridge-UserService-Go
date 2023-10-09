@@ -9,6 +9,7 @@ import (
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/model"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/repository"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/service"
+	publicModel "github.com/Bit-Bridge-Source/BitBridge-UserService-Go/public/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -114,12 +115,16 @@ func TestCreate_Success(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	mockRepository.On("Create", ctx, mock.MatchedBy(func(user *model.PrivateUserModel) bool {
-		return user.Email == privateUser.Email && user.Username == privateUser.Username
-	})).Return(nil)
+	userToBeCreated := &publicModel.CreateUserModel{
+		Email:    privateUser.Email,
+		Username: privateUser.Username,
+		Password: "test",
+	}
+
+	mockRepository.On("Create", ctx, mock.Anything).Return(nil)
 
 	// Act
-	result, err := service.Create(ctx, privateUser)
+	result, err := service.Create(ctx, userToBeCreated)
 
 	// Assert
 	assert.NoError(t, err)
@@ -142,12 +147,15 @@ func TestCreate_Failure(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	mockRepository.On("Create", ctx, mock.MatchedBy(func(user *model.PrivateUserModel) bool {
-		return user.Email == privateUser.Email && user.Username == privateUser.Username
-	})).Return(assert.AnError)
+	userToBeCreated := &publicModel.CreateUserModel{
+		Email:    privateUser.Email,
+		Username: privateUser.Username,
+		Password: "test",
+	}
 
+	mockRepository.On("Create", ctx, mock.Anything).Return(assert.AnError)
 	// Act
-	result, err := service.Create(ctx, privateUser)
+	result, err := service.Create(ctx, userToBeCreated)
 
 	// Assert
 	assert.Error(t, err)
