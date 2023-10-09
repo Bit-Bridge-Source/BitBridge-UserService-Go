@@ -5,12 +5,12 @@ import (
 	"net/mail"
 	"time"
 
+	commonService "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/service"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/model"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/repository"
 	publicModel "github.com/Bit-Bridge-Source/BitBridge-UserService-Go/public/model"
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type IUserService interface {
@@ -23,18 +23,20 @@ type IUserService interface {
 
 type UserService struct {
 	Repository repository.IUserRepository
+	Crypto     commonService.ICryptoService
 }
 
 // NewUserService creates a new instance of UserService.
-func NewUserService(repository repository.IUserRepository) *UserService {
+func NewUserService(repository repository.IUserRepository, crypto commonService.ICryptoService) *UserService {
 	return &UserService{
 		Repository: repository,
+		Crypto:     crypto,
 	}
 }
 
 // Create implements IUserService.
 func (s *UserService) Create(ctx context.Context, createUserModel *publicModel.CreateUserModel) (*model.PrivateUserModel, error) {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(createUserModel.Password), bcrypt.DefaultCost)
+	hashedPassword, err := s.Crypto.GenerateFromPassword(createUserModel.Password)
 	if err != nil {
 		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to hash password")
 	}
