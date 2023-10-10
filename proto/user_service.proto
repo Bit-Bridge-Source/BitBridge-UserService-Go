@@ -2,6 +2,12 @@ syntax = "proto3";
 
 option go_package = "user-service/pb";
 
+service UserService {
+  rpc GetPrivateUserByIdentifier(IdentifierRequest) returns (UserResponse);
+  rpc CreateUser(CreateUserRequest) returns (UserResponse);
+  rpc GetPublicUserByIdentifier(IdentifierRequest) returns (PublicUserResponse);
+}
+
 message UserResponse {
   string id = 1;
   string username = 2;
