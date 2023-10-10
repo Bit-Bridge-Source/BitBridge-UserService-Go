@@ -1,4 +1,4 @@
-package grpc
+package grpcserver
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 
 type IUserGrpcServer interface {
 	CreateUser(ctx context.Context, createUserModel *pb.CreateUserRequest) (*pb.PublicUserResponse, error)
-	GetUserByIdentifier(ctx context.Context, getUserByIdentifierModel *pb.IdentifierRequest) (*pb.UserResponse, error)
+	GetPrivateUserByIdentifier(ctx context.Context, getUserByIdentifierModel *pb.IdentifierRequest) (*pb.UserResponse, error)
 	GetPublicUserByIdentifier(ctx context.Context, getPublicUserByIdentifierModel *pb.IdentifierRequest) (*pb.PublicUserResponse, error)
 }
 
@@ -45,7 +45,7 @@ func (s *UserGrpcServer) CreateUser(ctx context.Context, createUserModel *pb.Cre
 	}, nil
 }
 
-func (s *UserGrpcServer) GetUserByIdentifier(ctx context.Context, getUserByIdentifierModel *pb.IdentifierRequest) (*pb.UserResponse, error) {
+func (s *UserGrpcServer) GetPrivateUserByIdentifier(ctx context.Context, getUserByIdentifierModel *pb.IdentifierRequest) (*pb.UserResponse, error) {
 	userResponse, err := s.UserService.FindByIdentifier(ctx, getUserByIdentifierModel.UserIdentifier)
 	if err != nil {
 		return nil, err
