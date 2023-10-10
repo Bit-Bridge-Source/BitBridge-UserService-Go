@@ -29,7 +29,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UserServiceClient interface {
 	GetPrivateUserByIdentifier(ctx context.Context, in *IdentifierRequest, opts ...grpc.CallOption) (*UserResponse, error)
-	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*UserResponse, error)
+	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*PublicUserResponse, error)
 	GetPublicUserByIdentifier(ctx context.Context, in *IdentifierRequest, opts ...grpc.CallOption) (*PublicUserResponse, error)
 }
 
@@ -50,8 +50,8 @@ func (c *userServiceClient) GetPrivateUserByIdentifier(ctx context.Context, in *
 	return out, nil
 }
 
-func (c *userServiceClient) CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*UserResponse, error) {
-	out := new(UserResponse)
+func (c *userServiceClient) CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*PublicUserResponse, error) {
+	out := new(PublicUserResponse)
 	err := c.cc.Invoke(ctx, UserService_CreateUser_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (c *userServiceClient) GetPublicUserByIdentifier(ctx context.Context, in *I
 // for forward compatibility
 type UserServiceServer interface {
 	GetPrivateUserByIdentifier(context.Context, *IdentifierRequest) (*UserResponse, error)
-	CreateUser(context.Context, *CreateUserRequest) (*UserResponse, error)
+	CreateUser(context.Context, *CreateUserRequest) (*PublicUserResponse, error)
 	GetPublicUserByIdentifier(context.Context, *IdentifierRequest) (*PublicUserResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
@@ -85,7 +85,7 @@ type UnimplementedUserServiceServer struct {
 func (UnimplementedUserServiceServer) GetPrivateUserByIdentifier(context.Context, *IdentifierRequest) (*UserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPrivateUserByIdentifier not implemented")
 }
-func (UnimplementedUserServiceServer) CreateUser(context.Context, *CreateUserRequest) (*UserResponse, error) {
+func (UnimplementedUserServiceServer) CreateUser(context.Context, *CreateUserRequest) (*PublicUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
 }
 func (UnimplementedUserServiceServer) GetPublicUserByIdentifier(context.Context, *IdentifierRequest) (*PublicUserResponse, error) {

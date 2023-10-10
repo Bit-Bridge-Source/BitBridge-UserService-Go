@@ -2,10 +2,13 @@ package grpcserver
 
 import (
 	"context"
+	"log"
+	"net"
 
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/service"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/proto/pb"
 	publicModel "github.com/Bit-Bridge-Source/BitBridge-UserService-Go/public/model"
+	"google.golang.org/grpc"
 )
 
 type IUserGrpcServer interface {
@@ -23,6 +26,17 @@ func NewUserGrpcServer(userService service.IUserService) *UserGrpcServer {
 	return &UserGrpcServer{
 		UserService: userService,
 	}
+}
+
+func (s *UserGrpcServer) Run(port string) error {
+	lis, err := net.Listen("tcp", port)
+	if err != nil {
+		log.Fatalf("Failed to listen on port: %v", err)
+		return err
+	}
+	gRPCServer := grpc.NewServer()
+	pb.RegisterUserServiceServer(gRPCServer, s)
+	return gRPCServer.Serve(lis)
 }
 
 func (s *UserGrpcServer) CreateUser(ctx context.Context, createUserModel *pb.CreateUserRequest) (*pb.PublicUserResponse, error) {
