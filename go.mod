@@ -2,7 +2,7 @@ module github.com/Bit-Bridge-Source/BitBridge-UserService-Go
 
 go 1.21.0
 
-require github.com/Bit-Bridge-Source/BitBridge-CommonService-Go v1.0.0
+require github.com/Bit-Bridge-Source/BitBridge-CommonService-Go v1.0.1
 
 require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
