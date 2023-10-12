@@ -3,11 +3,11 @@ module github.com/Bit-Bridge-Source/BitBridge-UserService-Go
 go 1.21.0
 
 require (
-	github.com/Bit-Bridge-Source/BitBridge-CommonService-Go v1.0.1
+	github.com/Bit-Bridge-Source/BitBridge-CommonService-Go v1.0.2
 	github.com/gofiber/fiber/v2 v2.49.2
 	github.com/stretchr/testify v1.8.4
 	go.mongodb.org/mongo-driver v1.12.1
-	google.golang.org/grpc v1.58.2
+	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.31.0
 )
 
@@ -53,6 +53,6 @@ require (
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20231002182017-d307bd883b97 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20231009173412-8bfb1ae86b6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
