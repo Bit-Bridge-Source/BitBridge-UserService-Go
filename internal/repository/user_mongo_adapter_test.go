@@ -9,30 +9,31 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type MockMongoAdapter struct {
 	mock.Mock
 }
 
-func (m *MockMongoAdapter) InsertOne(ctx context.Context, document interface{}) (*mongo.InsertOneResult, error) {
+func (m *MockMongoAdapter) InsertOne(ctx context.Context, document interface{}, opts ...*options.InsertOneOptions) (*mongo.InsertOneResult, error) {
 	args := m.Called(ctx, document)
 	return args.Get(0).(*mongo.InsertOneResult), args.Error(1)
 }
 
-func (m *MockMongoAdapter) UpdateOne(ctx context.Context, filter interface{}, update interface{}) (*mongo.UpdateResult, error) {
+func (m *MockMongoAdapter) UpdateOne(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 	args := m.Called(ctx, filter, update)
 	return args.Get(0).(*mongo.UpdateResult), args.Error(1)
 }
 
-func (m *MockMongoAdapter) DeleteOne(ctx context.Context, filter interface{}) (*mongo.DeleteResult, error) {
+func (m *MockMongoAdapter) DeleteOne(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
 	args := m.Called(ctx, filter)
 	return args.Get(0).(*mongo.DeleteResult), args.Error(1)
 }
 
-func (m *MockMongoAdapter) FindOne(ctx context.Context, filter interface{}) repository.ISingleResult {
+func (m *MockMongoAdapter) FindOne(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult {
 	args := m.Called(ctx, filter)
-	return args.Get(0).(repository.ISingleResult)
+	return args.Get(0).(*mongo.SingleResult)
 }
 
 func TestDeleteOne(t *testing.T) {

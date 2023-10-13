@@ -6,6 +6,12 @@ type UserFiberServer struct {
 	App *fiber.App
 }
 
+func NewUserFiberServer(config fiber.Config) *UserFiberServer {
+	return &UserFiberServer{
+		App: fiber.New(config),
+	}
+}
+
 func (server *UserFiberServer) Run(port string) error {
 	return server.App.Listen(port)
 }
