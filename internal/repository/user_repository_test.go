@@ -13,30 +13,31 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type MockMongoOperations struct {
 	mock.Mock
 }
 
-func (m *MockMongoOperations) InsertOne(ctx context.Context, document interface{}) (*mongo.InsertOneResult, error) {
+func (m *MockMongoOperations) InsertOne(ctx context.Context, document interface{}, opts ...*options.InsertOneOptions) (*mongo.InsertOneResult, error) {
 	args := m.Called(ctx, document)
 	return args.Get(0).(*mongo.InsertOneResult), args.Error(1)
 }
 
-func (m *MockMongoOperations) UpdateOne(ctx context.Context, filter interface{}, update interface{}) (*mongo.UpdateResult, error) {
+func (m *MockMongoOperations) UpdateOne(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 	args := m.Called(ctx, filter, update)
 	return args.Get(0).(*mongo.UpdateResult), args.Error(1)
 }
 
-func (m *MockMongoOperations) DeleteOne(ctx context.Context, filter interface{}) (*mongo.DeleteResult, error) {
+func (m *MockMongoOperations) DeleteOne(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
 	args := m.Called(ctx, filter)
 	return args.Get(0).(*mongo.DeleteResult), args.Error(1)
 }
 
-func (m *MockMongoOperations) FindOne(ctx context.Context, filter interface{}) repository.ISingleResult {
+func (m *MockMongoOperations) FindOne(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult {
 	args := m.Called(ctx, filter)
-	return args.Get(0).(repository.ISingleResult)
+	return args.Get(0).(*mongo.SingleResult)
 }
 
 type SingleResultWrapper struct {
@@ -176,31 +177,32 @@ func TestFindById(t *testing.T) {
 	ctx := context.TODO()
 	id := primitive.NewObjectID()
 
+	// Mock setup
 	mockMongo := new(MockMongoOperations)
-	mockSingleResult := new(MockSingleResult)
-	mockMongo.On("FindOne", ctx, bson.M{"_id": id}).Return(&SingleResultWrapper{decoder: mockSingleResult})
 
-	// Setup mockSingleResult
+	// Setup expectedUser
 	expectedUser := &model.PrivateUserModel{
 		ID: id,
 	}
-	mockSingleResult.On("Decode", mock.AnythingOfType("*model.PrivateUserModel")).Run(func(args mock.Arguments) {
-		arg := args.Get(0).(*model.PrivateUserModel)
-		*arg = *expectedUser
-	}).Return(nil)
 
+	// Create a real mongo.SingleResult
+	sr := mongo.NewSingleResultFromDocument(expectedUser, nil, bson.DefaultRegistry)
+
+	// Setup mockMongo to return the real mongo.SingleResult
+	mockMongo.On("FindOne", ctx, bson.M{"_id": id}).Return(sr)
+
+	// Create userRepo with the mocked MongoDB operations
 	userRepo := repository.NewUserRepository(mockMongo)
+
+	// Test the method
 	user, err := userRepo.FindById(ctx, id.Hex())
 
 	// Assertions
 	assert.Nil(t, err)
 	assert.Equal(t, expectedUser.ID, user.ID)
 
+	// Verify that the mock expectations were met
 	mockMongo.AssertExpectations(t)
-	mockSingleResult.AssertExpectations(t)
-
-	// Clear mock expectations
-	mockMongo.ExpectedCalls = nil
 }
 
 func TestFindById_UserNotFound(t *testing.T) {
@@ -208,18 +210,19 @@ func TestFindById_UserNotFound(t *testing.T) {
 	id := primitive.NewObjectID()
 
 	mockMongo := new(MockMongoOperations)
-	mockSingleResult := new(MockSingleResult)
+
+	sr := mongo.NewSingleResultFromDocument(&model.PrivateUserModel{}, mongo.ErrNoDocuments, bson.DefaultRegistry)
 
 	// Setup mockMongo to return an empty result
-	mockMongo.On("FindOne", ctx, bson.M{"_id": id}).Return(&SingleResultWrapper{decoder: mockSingleResult})
+	mockMongo.On("FindOne", ctx, bson.M{"_id": id}).Return(sr)
 
-	// Setup mockSingleResult to return a "mongo.ErrNoDocuments" error to simulate no document found
-	mockSingleResult.On("Decode", mock.AnythingOfType("*model.PrivateUserModel")).Return(mongo.ErrNoDocuments)
-
+	// Create userRepo with the mocked MongoDB operations
 	userRepo := repository.NewUserRepository(mockMongo)
 
+	// Test the method
 	user, err := userRepo.FindById(ctx, id.Hex())
 
+	// Custom check for your fiber error, adapt as needed
 	fiberError, ok := err.(*fiber.Error)
 	assert.True(t, ok)
 	assert.Equal(t, fiber.StatusNotFound, fiberError.Code)
@@ -227,8 +230,8 @@ func TestFindById_UserNotFound(t *testing.T) {
 	// Assertions
 	assert.Nil(t, user)
 
+	// Verify that the mock expectations were met
 	mockMongo.AssertExpectations(t)
-	mockSingleResult.AssertExpectations(t)
 
 	// Clear mock expectations
 	mockMongo.ExpectedCalls = nil
@@ -262,14 +265,13 @@ func TestFindById_UnknownError(t *testing.T) {
 	id := primitive.NewObjectID()
 
 	mockMongo := new(MockMongoOperations)
-	mockSingleResult := new(MockSingleResult)
 
-	// Setup mockMongo to return a result
-	mockMongo.On("FindOne", ctx, bson.M{"_id": id}).Return(&SingleResultWrapper{decoder: mockSingleResult})
-
-	// Setup mockSingleResult to return a generic error to simulate an unknown issue
 	unknownError := errors.New("unknown error")
-	mockSingleResult.On("Decode", mock.AnythingOfType("*model.PrivateUserModel")).Return(unknownError)
+
+	sr := mongo.NewSingleResultFromDocument(&model.PrivateUserModel{}, unknownError, bson.DefaultRegistry)
+
+	// Setup mockMongo to return an empty result
+	mockMongo.On("FindOne", ctx, bson.M{"_id": id}).Return(sr)
 
 	userRepo := repository.NewUserRepository(mockMongo)
 
@@ -280,7 +282,6 @@ func TestFindById_UnknownError(t *testing.T) {
 	assert.Equal(t, unknownError, err)
 
 	mockMongo.AssertExpectations(t)
-	mockSingleResult.AssertExpectations(t)
 
 	// Clear mock expectations
 	mockMongo.ExpectedCalls = nil
@@ -291,17 +292,16 @@ func TestFindByUsername(t *testing.T) {
 	username := "testuser"
 
 	mockMongo := new(MockMongoOperations)
-	mockSingleResult := new(MockSingleResult)
-	mockMongo.On("FindOne", ctx, bson.M{"username": username}).Return(&SingleResultWrapper{decoder: mockSingleResult})
 
 	// Setup mockSingleResult
 	expectedUser := &model.PrivateUserModel{
 		Username: username,
 	}
-	mockSingleResult.On("Decode", mock.AnythingOfType("*model.PrivateUserModel")).Run(func(args mock.Arguments) {
-		arg := args.Get(0).(*model.PrivateUserModel)
-		*arg = *expectedUser
-	}).Return(nil)
+
+	sr := mongo.NewSingleResultFromDocument(expectedUser, nil, bson.DefaultRegistry)
+
+	// Setup mockMongo to return the real mongo.SingleResult
+	mockMongo.On("FindOne", ctx, bson.M{"username": username}).Return(sr)
 
 	repo := repository.NewUserRepository(mockMongo)
 	user, err := repo.FindByUsername(ctx, username)
@@ -311,7 +311,6 @@ func TestFindByUsername(t *testing.T) {
 	assert.Equal(t, expectedUser.Username, user.Username)
 
 	mockMongo.AssertExpectations(t)
-	mockSingleResult.AssertExpectations(t)
 
 	// Clear mock expectations
 	mockMongo.ExpectedCalls = nil
@@ -322,13 +321,11 @@ func TestFindByUsername_UserNotFound(t *testing.T) {
 	username := "testuser"
 
 	mockMongo := new(MockMongoOperations)
-	mockSingleResult := new(MockSingleResult)
+
+	sr := mongo.NewSingleResultFromDocument(&model.PrivateUserModel{}, mongo.ErrNoDocuments, bson.DefaultRegistry)
 
 	// Setup mockMongo to return an empty result
-	mockMongo.On("FindOne", ctx, bson.M{"username": username}).Return(&SingleResultWrapper{decoder: mockSingleResult})
-
-	// Setup mockSingleResult to return a "mongo.ErrNoDocuments" error to simulate no document found
-	mockSingleResult.On("Decode", mock.AnythingOfType("*model.PrivateUserModel")).Return(mongo.ErrNoDocuments)
+	mockMongo.On("FindOne", ctx, bson.M{"username": username}).Return(sr)
 
 	repo := repository.NewUserRepository(mockMongo)
 	user, err := repo.FindByUsername(ctx, username)
@@ -340,8 +337,8 @@ func TestFindByUsername_UserNotFound(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, fiber.StatusNotFound, fiberError.Code)
 
+	// Verify mock expectations
 	mockMongo.AssertExpectations(t)
-	mockSingleResult.AssertExpectations(t)
 
 	// Clear mock expectations
 	mockMongo.ExpectedCalls = nil
@@ -352,14 +349,12 @@ func TestFindByUsername_UnknownError(t *testing.T) {
 	username := "testuser"
 
 	mockMongo := new(MockMongoOperations)
-	mockSingleResult := new(MockSingleResult)
 
-	// Setup mockMongo to return a result
-	mockMongo.On("FindOne", ctx, bson.M{"username": username}).Return(&SingleResultWrapper{decoder: mockSingleResult})
-
-	// Setup mockSingleResult to return a generic error to simulate an unknown issue
 	unknownError := errors.New("unknown error")
-	mockSingleResult.On("Decode", mock.AnythingOfType("*model.PrivateUserModel")).Return(unknownError)
+	sr := mongo.NewSingleResultFromDocument(&model.PrivateUserModel{}, unknownError, bson.DefaultRegistry)
+
+	// Setup mockMongo to return a result with an error
+	mockMongo.On("FindOne", ctx, bson.M{"username": username}).Return(sr)
 
 	repo := repository.NewUserRepository(mockMongo)
 	user, err := repo.FindByUsername(ctx, username)
@@ -369,8 +364,8 @@ func TestFindByUsername_UnknownError(t *testing.T) {
 	assert.Equal(t, unknownError, err)
 	assert.Nil(t, user)
 
+	// Verify mock expectations
 	mockMongo.AssertExpectations(t)
-	mockSingleResult.AssertExpectations(t)
 
 	// Clear mock expectations
 	mockMongo.ExpectedCalls = nil
@@ -381,18 +376,12 @@ func TestFindByEmail(t *testing.T) {
 	email := "test@mail.com"
 
 	mockMongo := new(MockMongoOperations)
-	mockSingleResult := new(MockSingleResult)
-	mockMongo.On("FindOne", ctx, bson.M{"email": email}).Return(&SingleResultWrapper{decoder: mockSingleResult})
 
-	// Setup mockSingleResult
 	expectedUser := &model.PrivateUserModel{
 		Email: email,
 	}
-
-	mockSingleResult.On("Decode", mock.AnythingOfType("*model.PrivateUserModel")).Run(func(args mock.Arguments) {
-		arg := args.Get(0).(*model.PrivateUserModel)
-		*arg = *expectedUser
-	}).Return(nil)
+	sr := mongo.NewSingleResultFromDocument(expectedUser, nil, bson.DefaultRegistry)
+	mockMongo.On("FindOne", ctx, bson.M{"email": email}).Return(sr)
 
 	repo := repository.NewUserRepository(mockMongo)
 	user, err := repo.FindByEmail(ctx, email)
@@ -402,9 +391,6 @@ func TestFindByEmail(t *testing.T) {
 	assert.Equal(t, expectedUser.Email, user.Email)
 
 	mockMongo.AssertExpectations(t)
-	mockSingleResult.AssertExpectations(t)
-
-	// Clear mock expectations
 	mockMongo.ExpectedCalls = nil
 }
 
@@ -413,25 +399,20 @@ func TestFindByEmail_UserNotFound(t *testing.T) {
 	email := "test@mail.com"
 
 	mockMongo := new(MockMongoOperations)
-	mockSingleResult := new(MockSingleResult)
-	mockMongo.On("FindOne", ctx, bson.M{"email": email}).Return(&SingleResultWrapper{decoder: mockSingleResult})
 
-	mockSingleResult.On("Decode", mock.AnythingOfType("*model.PrivateUserModel")).Return(mongo.ErrNoDocuments)
+	sr := mongo.NewSingleResultFromDocument(&model.PrivateUserModel{}, mongo.ErrNoDocuments, bson.DefaultRegistry)
+	mockMongo.On("FindOne", ctx, bson.M{"email": email}).Return(sr)
 
 	repo := repository.NewUserRepository(mockMongo)
 	user, err := repo.FindByEmail(ctx, email)
 
 	// Assertions
 	assert.Nil(t, user)
-
 	fiberError, ok := err.(*fiber.Error)
 	assert.True(t, ok)
 	assert.Equal(t, fiber.StatusNotFound, fiberError.Code)
 
 	mockMongo.AssertExpectations(t)
-	mockSingleResult.AssertExpectations(t)
-
-	// Clear mock expectations
 	mockMongo.ExpectedCalls = nil
 }
 
@@ -440,11 +421,10 @@ func TestFindByEmail_UnknownError(t *testing.T) {
 	email := "test@mail.com"
 
 	mockMongo := new(MockMongoOperations)
-	mockSingleResult := new(MockSingleResult)
-	mockMongo.On("FindOne", ctx, bson.M{"email": email}).Return(&SingleResultWrapper{decoder: mockSingleResult})
 
 	unknownError := errors.New("unknown error")
-	mockSingleResult.On("Decode", mock.AnythingOfType("*model.PrivateUserModel")).Return(unknownError)
+	sr := mongo.NewSingleResultFromDocument(&model.PrivateUserModel{}, unknownError, bson.DefaultRegistry)
+	mockMongo.On("FindOne", ctx, bson.M{"email": email}).Return(sr)
 
 	repo := repository.NewUserRepository(mockMongo)
 	user, err := repo.FindByEmail(ctx, email)
@@ -455,8 +435,5 @@ func TestFindByEmail_UnknownError(t *testing.T) {
 	assert.Nil(t, user)
 
 	mockMongo.AssertExpectations(t)
-	mockSingleResult.AssertExpectations(t)
-
-	// Clear mock expectations
 	mockMongo.ExpectedCalls = nil
 }
