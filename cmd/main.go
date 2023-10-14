@@ -1,7 +1,7 @@
 package main
 
 import (
-	commonService "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/service"
+	common_crypto "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/crypto"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/app"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/database"
 	fiberserver "github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/fiber"
@@ -21,7 +21,7 @@ func main() {
 		panic(err)
 	}
 
-	cryptoService := commonService.NewCryptoService()
+	cryptoService := common_crypto.NewCrypto()
 
 	defer db.Disconnect()
 
