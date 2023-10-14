@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	commonService "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/service"
+	common_crypto "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/crypto"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/model"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/repository"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/service"
@@ -103,7 +103,7 @@ func (m *MockCryptoService) CompareHashAndPassword(hashedPassword, password stri
 }
 
 // Ensure that MockCryptoService implements ICryptoService.
-var _ commonService.ICryptoService = &MockCryptoService{}
+var _ common_crypto.ICrypto = &MockCryptoService{}
 
 func TestCreate_Success(t *testing.T) {
 	// Arrange

@@ -5,7 +5,7 @@ import (
 	"net/mail"
 	"time"
 
-	commonService "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/service"
+	common_crypto "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/crypto"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/model"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/repository"
 	publicModel "github.com/Bit-Bridge-Source/BitBridge-UserService-Go/public/model"
@@ -23,11 +23,11 @@ type IUserService interface {
 
 type UserService struct {
 	Repository repository.IUserRepository
-	Crypto     commonService.ICryptoService
+	Crypto     common_crypto.ICrypto
 }
 
 // NewUserService creates a new instance of UserService.
-func NewUserService(repository repository.IUserRepository, crypto commonService.ICryptoService) *UserService {
+func NewUserService(repository repository.IUserRepository, crypto common_crypto.ICrypto) *UserService {
 	return &UserService{
 		Repository: repository,
 		Crypto:     crypto,
