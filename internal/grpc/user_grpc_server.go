@@ -69,6 +69,7 @@ func (s *UserGrpcServer) GetPrivateUserByIdentifier(ctx context.Context, getUser
 		Id:        userResponse.ID.Hex(),
 		Email:     userResponse.Email,
 		Username:  userResponse.Username,
+		Hash:      userResponse.Hash,
 		CreatedAt: userResponse.CreatedAt.String(),
 		UpdatedAt: userResponse.UpdatedAt.String(),
 	}, nil
