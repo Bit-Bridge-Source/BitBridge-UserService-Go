@@ -2,11 +2,14 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	common_error "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/error"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // IUserRepository defines the interface for user repository operations.
@@ -37,12 +40,25 @@ func (m *MongoUserRepository) Create(ctx context.Context, user *model.PrivateUse
 	user.UpdatedAt = time.Now()
 	_, err := m.Collection.InsertOne(ctx, user)
 
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return common_error.NewServiceError(common_error.Conflict, "User creation failed", err)
+		}
+	}
+
 	return err
 }
 
 // Delete implements IUserRepository.
 func (m *MongoUserRepository) Delete(ctx context.Context, user *model.PrivateUserModel) error {
 	_, err := m.Collection.DeleteOne(ctx, user)
+
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return common_error.NewServiceError(common_error.NotFound, "User not found", err)
+		}
+	}
+
 	return err
 }
 
@@ -51,6 +67,15 @@ func (m *MongoUserRepository) FindByEmail(ctx context.Context, email string) (*m
 	var user model.PrivateUserModel
 	filter := bson.M{"email": email}
 	err := m.Collection.FindOne(ctx, filter).Decode(&user)
+
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, common_error.NewServiceError(common_error.NotFound, "User not found", err)
+		} else {
+			return nil, err
+		}
+	}
+
 	return &user, err
 }
 
@@ -62,6 +87,15 @@ func (m *MongoUserRepository) FindById(ctx context.Context, id string) (*model.P
 	}
 	var user model.PrivateUserModel
 	err = m.Collection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&user)
+
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, common_error.NewServiceError(common_error.NotFound, "User not found", err)
+		} else {
+			return nil, err
+		}
+	}
+
 	return &user, err
 }
 
@@ -70,6 +104,15 @@ func (m *MongoUserRepository) FindByUsername(ctx context.Context, username strin
 	var user model.PrivateUserModel
 	filter := bson.M{"username": username}
 	err := m.Collection.FindOne(ctx, filter).Decode(&user)
+
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, common_error.NewServiceError(common_error.NotFound, "User not found", err)
+		} else {
+			return nil, err
+		}
+	}
+
 	return &user, err
 }
 
@@ -79,6 +122,15 @@ func (m *MongoUserRepository) Update(ctx context.Context, user *model.PrivateUse
 	filter := bson.M{"_id": user.ID}
 	update := bson.M{"$set": user}
 	_, err := m.Collection.UpdateOne(ctx, filter, update)
+
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return common_error.NewServiceError(common_error.NotFound, "User not found", err)
+		} else {
+			return err
+		}
+	}
+
 	return err
 }
 

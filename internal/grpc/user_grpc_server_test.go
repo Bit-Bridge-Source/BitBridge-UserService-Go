@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"google.golang.org/grpc"
 )
 
 type MockIUserService struct {
@@ -95,7 +96,7 @@ func TestCreateUser_Success(t *testing.T) {
 	// Setup
 	mockUserService := new(MockIUserService)
 	mockUserService.On("Create", mock.Anything, mock.Anything).Return(userResponse, nil)
-	grpcserver := grpcserver.NewUserGrpcServer(mockUserService)
+	grpcserver := grpcserver.NewUserGrpcServer(mockUserService, []grpc.UnaryServerInterceptor{})
 
 	// Test
 	resp, err := grpcserver.CreateUser(context.Background(), &pb.CreateUserRequest{
@@ -113,7 +114,7 @@ func TestCreateUser_Success(t *testing.T) {
 func TestCreateUser_Fail(t *testing.T) {
 	mockUserService := new(MockIUserService)
 	mockUserService.On("Create", mock.Anything, mock.Anything).Return(nil, assert.AnError)
-	grpcserver := grpcserver.NewUserGrpcServer(mockUserService)
+	grpcserver := grpcserver.NewUserGrpcServer(mockUserService, []grpc.UnaryServerInterceptor{})
 
 	// Test
 	resp, err := grpcserver.CreateUser(context.Background(), &pb.CreateUserRequest{
@@ -141,7 +142,7 @@ func TestGetPrivateUserByIdentifier_Success(t *testing.T) {
 	// Setup
 	mockUserService := new(MockIUserService)
 	mockUserService.On("FindByIdentifier", mock.Anything, mock.Anything).Return(userResponse, nil)
-	grpcserver := grpcserver.NewUserGrpcServer(mockUserService)
+	grpcserver := grpcserver.NewUserGrpcServer(mockUserService, []grpc.UnaryServerInterceptor{})
 
 	// Test
 	resp, err := grpcserver.GetPrivateUserByIdentifier(context.Background(), &pb.IdentifierRequest{
@@ -157,7 +158,7 @@ func TestGetPrivateUserByIdentifier_Success(t *testing.T) {
 func TestGetPrivateUserByIdentifier_Fail(t *testing.T) {
 	mockUserService := new(MockIUserService)
 	mockUserService.On("FindByIdentifier", mock.Anything, mock.Anything).Return(nil, assert.AnError)
-	grpcserver := grpcserver.NewUserGrpcServer(mockUserService)
+	grpcserver := grpcserver.NewUserGrpcServer(mockUserService, []grpc.UnaryServerInterceptor{})
 
 	// Test
 	resp, err := grpcserver.GetPrivateUserByIdentifier(context.Background(), &pb.IdentifierRequest{
@@ -183,7 +184,7 @@ func TestGetPublicUserByIdentifier_Success(t *testing.T) {
 	// Setup
 	mockUserService := new(MockIUserService)
 	mockUserService.On("FindByIdentifier", mock.Anything, mock.Anything).Return(userResponse, nil)
-	grpcserver := grpcserver.NewUserGrpcServer(mockUserService)
+	grpcserver := grpcserver.NewUserGrpcServer(mockUserService, []grpc.UnaryServerInterceptor{})
 
 	// Test
 	resp, err := grpcserver.GetPublicUserByIdentifier(context.Background(), &pb.IdentifierRequest{
@@ -199,7 +200,7 @@ func TestGetPublicUserByIdentifier_Success(t *testing.T) {
 func TestGetPublicUserByIdentifier_Fail(t *testing.T) {
 	mockUserService := new(MockIUserService)
 	mockUserService.On("FindByIdentifier", mock.Anything, mock.Anything).Return(nil, assert.AnError)
-	grpcserver := grpcserver.NewUserGrpcServer(mockUserService)
+	grpcserver := grpcserver.NewUserGrpcServer(mockUserService, []grpc.UnaryServerInterceptor{})
 
 	// Test
 	resp, err := grpcserver.GetPublicUserByIdentifier(context.Background(), &pb.IdentifierRequest{

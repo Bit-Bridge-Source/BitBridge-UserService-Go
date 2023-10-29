@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 
+	common_grpc "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/grpc"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/service"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/proto/pb"
 	publicModel "github.com/Bit-Bridge-Source/BitBridge-UserService-Go/public/model"
@@ -18,13 +19,15 @@ type IUserGrpcServer interface {
 }
 
 type UserGrpcServer struct {
-	UserService service.IUserService
+	UserService  service.IUserService
+	Interceptors []grpc.UnaryServerInterceptor
 	pb.UnimplementedUserServiceServer
 }
 
-func NewUserGrpcServer(userService service.IUserService) *UserGrpcServer {
+func NewUserGrpcServer(userService service.IUserService, interceptors []grpc.UnaryServerInterceptor) *UserGrpcServer {
 	return &UserGrpcServer{
-		UserService: userService,
+		UserService:  userService,
+		Interceptors: interceptors,
 	}
 }
 
@@ -34,7 +37,9 @@ func (s *UserGrpcServer) Run(port string) error {
 		log.Fatalf("Failed to listen on port: %v", err)
 		return err
 	}
-	gRPCServer := grpc.NewServer()
+	gRPCServer := grpc.NewServer(
+		grpc.UnaryInterceptor(common_grpc.ChainUnaryInterceptors(s.Interceptors...)),
+	)
 	pb.RegisterUserServiceServer(gRPCServer, s)
 	return gRPCServer.Serve(lis)
 }
