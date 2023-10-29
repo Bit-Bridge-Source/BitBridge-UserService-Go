@@ -2,14 +2,11 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/model"
-	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // IUserRepository defines the interface for user repository operations.
@@ -40,14 +37,6 @@ func (m *MongoUserRepository) Create(ctx context.Context, user *model.PrivateUse
 	user.UpdatedAt = time.Now()
 	_, err := m.Collection.InsertOne(ctx, user)
 
-	if err != nil {
-		if mongo.IsDuplicateKeyError(err) {
-			return fiber.NewError(fiber.StatusConflict, "User already exists")
-		}
-
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create user")
-	}
-
 	return err
 }
 
@@ -62,30 +51,18 @@ func (m *MongoUserRepository) FindByEmail(ctx context.Context, email string) (*m
 	var user model.PrivateUserModel
 	filter := bson.M{"email": email}
 	err := m.Collection.FindOne(ctx, filter).Decode(&user)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, fiber.NewError(fiber.StatusNotFound, "User not found")
-		}
-		return nil, err
-	}
-	return &user, nil
+	return &user, err
 }
 
 // FindById implements IUserRepository.
 func (m *MongoUserRepository) FindById(ctx context.Context, id string) (*model.PrivateUserModel, error) {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid ID")
+		return nil, err
 	}
 	var user model.PrivateUserModel
 	err = m.Collection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&user)
-	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, fiber.NewError(fiber.StatusNotFound, "User not found")
-		}
-		return nil, err
-	}
-	return &user, nil
+	return &user, err
 }
 
 // FindByUsername implements IUserRepository.
@@ -93,13 +70,7 @@ func (m *MongoUserRepository) FindByUsername(ctx context.Context, username strin
 	var user model.PrivateUserModel
 	filter := bson.M{"username": username}
 	err := m.Collection.FindOne(ctx, filter).Decode(&user)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, fiber.NewError(fiber.StatusNotFound, "User not found")
-		}
-		return nil, err
-	}
-	return &user, nil
+	return &user, err
 }
 
 // Update implements IUserRepository.
