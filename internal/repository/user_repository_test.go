@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
+	common_error "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/error"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/model"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/repository"
-	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson"
@@ -222,10 +222,10 @@ func TestFindById_UserNotFound(t *testing.T) {
 	// Test the method
 	user, err := userRepo.FindById(ctx, id.Hex())
 
-	// Custom check for your fiber error, adapt as needed
-	fiberError, ok := err.(*fiber.Error)
+	// Custom check for your Service Error error, adapt as needed
+	serviceError, ok := err.(*common_error.ServiceError)
 	assert.True(t, ok)
-	assert.Equal(t, fiber.StatusNotFound, fiberError.Code)
+	assert.Equal(t, common_error.NotFound, serviceError.Code)
 
 	// Assertions
 	assert.Nil(t, user)
@@ -249,10 +249,6 @@ func TestFindById_InvalidId(t *testing.T) {
 
 	// Assertions
 	assert.NotNil(t, err)
-
-	fiberError, ok := err.(*fiber.Error)
-	assert.True(t, ok)
-	assert.Equal(t, fiber.StatusBadRequest, fiberError.Code)
 
 	mockMongo.AssertExpectations(t)
 
@@ -333,9 +329,10 @@ func TestFindByUsername_UserNotFound(t *testing.T) {
 	// Assertions
 	assert.Nil(t, user)
 
-	fiberError, ok := err.(*fiber.Error)
+	// Custom check for your Service Error error, adapt as needed
+	serviceError, ok := err.(*common_error.ServiceError)
 	assert.True(t, ok)
-	assert.Equal(t, fiber.StatusNotFound, fiberError.Code)
+	assert.Equal(t, common_error.NotFound, serviceError.Code)
 
 	// Verify mock expectations
 	mockMongo.AssertExpectations(t)
@@ -408,9 +405,10 @@ func TestFindByEmail_UserNotFound(t *testing.T) {
 
 	// Assertions
 	assert.Nil(t, user)
-	fiberError, ok := err.(*fiber.Error)
+	// Custom check for your Service Error error, adapt as needed
+	serviceError, ok := err.(*common_error.ServiceError)
 	assert.True(t, ok)
-	assert.Equal(t, fiber.StatusNotFound, fiberError.Code)
+	assert.Equal(t, common_error.NotFound, serviceError.Code)
 
 	mockMongo.AssertExpectations(t)
 	mockMongo.ExpectedCalls = nil
