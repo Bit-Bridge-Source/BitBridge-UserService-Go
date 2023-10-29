@@ -20,8 +20,9 @@ func (server *UserFiberServer) Stop() error {
 	return server.App.Shutdown()
 }
 
-func (server *UserFiberServer) SetupRoutes(userHandler *UserFiberHandler) {
+func (server *UserFiberServer) SetupRoutes(userHandler *UserFiberHandler, authMiddleware func(c *fiber.Ctx) error) {
 	private := server.App.Group("/private")
+	private.Use(authMiddleware)
 	private.Get("/user/:user_identifier", userHandler.FindByIdentifierPrivate)
 	private.Post("/user", userHandler.Create)
 

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	common_crypto "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/crypto"
-	errors "github.com/Bit-Bridge-Source/BitBridge-CommonService-Go/public/error"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/model"
 	"github.com/Bit-Bridge-Source/BitBridge-UserService-Go/internal/repository"
 	publicModel "github.com/Bit-Bridge-Source/BitBridge-UserService-Go/public/model"
@@ -38,7 +37,7 @@ func NewUserService(repository repository.IUserRepository, crypto common_crypto.
 func (s *UserService) Create(ctx context.Context, createUserModel *publicModel.CreateUserModel) (*model.PrivateUserModel, error) {
 	hashedPassword, err := s.Crypto.GenerateFromPassword(createUserModel.Password)
 	if err != nil {
-		return nil, errors.NewServiceError(errors.PasswordHashingFailed, "Password hashing failed", err)
+		return nil, err
 	}
 
 	user := &model.PrivateUserModel{
@@ -53,7 +52,7 @@ func (s *UserService) Create(ctx context.Context, createUserModel *publicModel.C
 	err = s.Repository.Create(ctx, user)
 
 	if err != nil {
-		return nil, errors.NewServiceError(errors.UserCreationFailed, "User creation failed", err)
+		return nil, err
 	}
 
 	return user, nil
@@ -63,7 +62,7 @@ func (s *UserService) Create(ctx context.Context, createUserModel *publicModel.C
 func (s *UserService) FindByEmail(ctx context.Context, email string) (*model.PrivateUserModel, error) {
 	privateUser, err := s.Repository.FindByEmail(ctx, email)
 	if err != nil {
-		return nil, errors.NewServiceError(errors.NotFound, "User not found", err)
+		return nil, err
 	}
 
 	return privateUser, nil
@@ -73,7 +72,7 @@ func (s *UserService) FindByEmail(ctx context.Context, email string) (*model.Pri
 func (s *UserService) FindById(ctx context.Context, id string) (*model.PrivateUserModel, error) {
 	privateUser, err := s.Repository.FindById(ctx, id)
 	if err != nil {
-		return nil, errors.NewServiceError(errors.NotFound, "User not found", err)
+		return nil, err
 	}
 
 	return privateUser, nil
@@ -98,7 +97,7 @@ func (s *UserService) FindByIdentifier(ctx context.Context, identifier string) (
 func (s *UserService) FindByUsername(ctx context.Context, username string) (*model.PrivateUserModel, error) {
 	privateUser, err := s.Repository.FindByUsername(ctx, username)
 	if err != nil {
-		return nil, errors.NewServiceError(errors.NotFound, "User not found", err)
+		return nil, err
 	}
 
 	return privateUser, nil
