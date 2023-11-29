@@ -3,7 +3,7 @@ module github.com/Bit-Bridge-Source/BitBridge-UserService-Go
 go 1.21.0
 
 require (
-	github.com/Bit-Bridge-Source/BitBridge-CommonService-Go v1.10.4
+	
 	github.com/gofiber/fiber/v2 v2.50.0
 	github.com/stretchr/testify v1.8.4
 	go.mongodb.org/mongo-driver v1.12.1
